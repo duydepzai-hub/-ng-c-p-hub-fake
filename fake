@@ -1,0 +1,160 @@
+-- fake attack --
+loadstring(game:HttpGet("https://raw.githubusercontent.com/duydepzai-hub/Duydepzaihub-PREMIUMv6/refs/heads/main/bananacat-duydepzai%3F.lua"))()
+-- [[ 1. KHỞI TẠO VÀ DỌN DẸP UI CŨ ]]
+local CoreGui = game:GetService("CoreGui")
+if CoreGui:FindFirstChild("DuyHub_CustomUI") then
+    CoreGui.DuyHub_CustomUI:Destroy()
+end
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "DuyHub_CustomUI"
+ScreenGui.Parent = CoreGui
+ScreenGui.ResetOnSpawn = false
+
+-- [[ 2. TẠO NÚT MỞ MENU (CÓ THỂ KÉO ĐƯỢC) ]]
+local ToggleButton = Instance.new("TextButton")
+ToggleButton.Name = "ToggleButton"
+ToggleButton.Parent = ScreenGui
+ToggleButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+ToggleButton.BorderSizePixel = 2
+ToggleButton.Position = UDim2.new(0, 50, 0, 50)
+ToggleButton.Size = UDim2.new(0, 60, 0, 60)
+ToggleButton.Text = "DY"
+ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleButton.TextSize = 20
+ToggleButton.Draggable = true -- Nút này bạn có thể nắm kéo đi khắp màn hình
+ToggleButton.Active = true
+
+-- Làm tròn nút
+local UICornerBtn = Instance.new("UICorner")
+UICornerBtn.CornerRadius = UDim.new(1, 0)
+UICornerBtn.Parent = ToggleButton
+
+-- [[ 3. KHUNG MENU CHÍNH ]]
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Parent = ScreenGui
+MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+MainFrame.Position = UDim2.new(0.5, -100, 0.5, -125)
+MainFrame.Size = UDim2.new(0, 220, 0, 280)
+MainFrame.Visible = false -- Mặc định ẩn, bấm nút "DY" mới hiện
+MainFrame.Active = true
+MainFrame.Draggable = true -- Cả menu cũng kéo được luôn
+
+local UICornerFrame = Instance.new("UICorner")
+UICornerFrame.Parent = MainFrame
+
+local Title = Instance.new("TextLabel")
+Title.Parent = MainFrame
+Title.Size = UDim2.new(1, 0, 0, 35)
+Title.Text = "MAIN - DY MUSIC"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+Title.TextSize = 16
+
+-- [[ 4. CÁC CHỨC NĂNG (LOGIC DUY.TXT) ]]
+local Content = Instance.new("Frame")
+Content.Parent = MainFrame
+Content.Position = UDim2.new(0, 10, 0, 45)
+Content.Size = UDim2.new(1, -20, 1, -55)
+Content.BackgroundTransparency = 1
+
+local UIList = Instance.new("UIListLayout")
+UIList.Parent = Content
+UIList.Padding = UDim.new(0, 8)
+
+-- Biến điều khiển
+_G.AutoFarmNear = false
+_G.FarmHeight = 15
+local Player = game:GetService("Players").LocalPlayer
+
+-- Hàm tạo Nút Bật/Tắt
+local function CreateToggle(name, callback)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(1, 0, 0, 35)
+    btn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    btn.Text = name .. ": OFF"
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.Parent = Content
+    
+    local state = false
+    btn.MouseButton1Click:Connect(function()
+        state = not state
+        btn.Text = state and name .. ": ON" or name .. ": OFF"
+        btn.BackgroundColor3 = state and Color3.fromRGB(0, 170, 0) or Color3.fromRGB(60, 60, 60)
+        callback(state)
+    end)
+end
+
+-- Hàm tạo Thanh nhập số (Thay cho Slider để chính xác tuyệt đối)
+local function CreateInput(name, default, callback)
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(1, 0, 0, 20)
+    label.Text = name
+    label.TextColor3 = Color3.fromRGB(200, 200, 200)
+    label.BackgroundTransparency = 1
+    label.Parent = Content
+    
+    local input = Instance.new("TextBox")
+    input.Size = UDim2.new(1, 0, 0, 30)
+    input.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+    input.Text = tostring(default)
+    input.TextColor3 = Color3.fromRGB(255, 255, 255)
+    input.Parent = Content
+    input.FocusLost:Connect(function()
+        callback(tonumber(input.Text) or default)
+    end)
+end
+
+-- Lắp các nút vào
+CreateToggle("Auto Farm Gần", function(val) _G.AutoFarmNear = val end)
+CreateInput("Độ cao (Tối đa 50)", 15, function(val) _G.FarmHeight = math.clamp(val, 0, 50) end)
+CreateInput("Tốc độ chạy bộ", 16, function(val) 
+    if Player.Character and Player.Character:FindFirstChild("Humanoid") then
+        Player.Character.Humanoid.WalkSpeed = val
+    end
+end)
+
+-- Sự kiện ẩn hiện menu
+ToggleButton.MouseButton1Click:Connect(function()
+    MainFrame.Visible = not MainFrame.Visible
+end)
+
+-- [[ 5. VÒNG LẶP FARM CHUẨN DUY.TXT ]]
+task.spawn(function()
+    while task.wait() do
+        if _G.AutoFarmNear then
+            pcall(function()
+                local Target = nil
+                local Distance = math.huge
+                for _, v in pairs(game:GetService("Workspace").Enemies:GetChildren()) do
+                    if v:FindFirstChild("HumanoidRootPart") and v:FindFirstChild("Humanoid") and v.Humanoid.Health > 0 then
+                        local Mag = (Player.Character.HumanoidRootPart.Position - v.HumanoidRootPart.Position).Magnitude
+                        if Mag < Distance then
+                            Distance = Mag
+                            Target = v
+                        end
+                    end
+                end
+
+                if Target then
+                    -- Gom quái & Phóng to (Logic Duy)
+                    for _, v in pairs(game:GetService("Workspace").Enemies:GetChildren()) do
+                        if v.Name == Target.Name and v:FindFirstChild("HumanoidRootPart") then
+                            v.HumanoidRootPart.CFrame = Target.HumanoidRootPart.CFrame
+                            v.HumanoidRootPart.CanCollide = false
+                            v.HumanoidRootPart.Size = Vector3.new(60, 60, 60)
+                        end
+                    end
+                    -- Di chuyển theo độ cao
+                    Player.Character.HumanoidRootPart.CFrame = Target.HumanoidRootPart.CFrame * CFrame.new(0, _G.FarmHeight, 0)
+                    -- Đánh
+                    game:GetService("VirtualUser"):CaptureController()
+                    game:GetService("VirtualUser"):Button1Down(Vector2.new(1280, 672))
+                end
+            end)
+        end
+    end
+end)
+
+print("DUY HUB CUSTOM UI - ĐÃ SẴN SÀNG!")
